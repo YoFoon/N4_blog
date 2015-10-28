@@ -8,6 +8,7 @@ var bodyParser = require('body-parser');
 var routes = require('./routes/index');
 var settings = require('./settings');
 var flash = require('connect-flash');
+var multer = require('multer');
 var app = express();//生成一个express实例 app。
 
 var session = require('express-session');
@@ -21,6 +22,13 @@ app.use(session({
     host: settings.host,
     port: settings.port
   })
+}));
+
+app.use(multer({
+  dest: './public/images',//dest 是上传的文件所在的目录
+  rename: function (fieldname, filename) {//rename 函数用来修改上传后的文件名，这里设置为保持原来的文件名。
+    return filename;
+  }
 }));
 // view engine setup
 app.set('port', process.env.PORT || 3000);//设置端口号。
