@@ -14,6 +14,8 @@ var app = express();//生成一个express实例 app。
 var session = require('express-session');
 var MongoStore = require('connect-mongo')(session);
 app.use(session({
+  resave:false,
+  saveUninitialized: true, 
   secret: settings.cookieSecret,
   key: settings.db,//cookie name
   cookie: {maxAge: 1000 * 60 * 60 * 24 * 30},//30 days
