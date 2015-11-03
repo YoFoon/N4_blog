@@ -28,7 +28,8 @@ Post.prototype.save = function(callback) {
     title: this.title,
     tags: this.tags,
     post: this.post,
-    comments: []
+    comments: [],
+    pv:0
   };
   //打开数据库
   mongodb.open(function (err, db) {
@@ -97,48 +98,50 @@ Post.getTen = function(name,page, callback) {
     });
   });
 };
-//根据用户名、发表日期及文章名精确获取一篇文章。
-Post.getOne = function(name,day,title,callback){
+//获取一篇文章
+Post.getOne = function(name, day, title, callback) {
   //打开数据库
-  mongodb.open(function(err,db){
-    if(err){
+  mongodb.open(function (err, db) {
+    if (err) {
       return callback(err);
     }
-    //读取 posts集合
-    db.collection('posts',function(err,collection){
-      if(err){
+    //读取 posts 集合
+    db.collection('posts', function (err, collection) {
+      if (err) {
         mongodb.close();
         return callback(err);
       }
-      //根据用户名，发表日期及文章进行查询
+      //根据用户名、发表日期及文章名进行查询
       collection.findOne({
-        'name':name,
-        "time.day":day,
-        'title':title
-      },function(err,doc){
-        mongodb.close();
-        if(err){
+        "name": name,
+        "time.day": day,
+        "title": title
+      }, function (err, doc) {
+        if (err) {
+          mongodb.close();
           return callback(err);
         }
-        //解析markdowm为html
-        if(doc){
-          // comments 在哪呢
-          // 程序没有问题， 你的数据不正确
-          //////////////////////////////////////////////////////////////////////////////////////
-          // comments =[{content: '##这里是评论内容', author: '作者2'},{content:'--这是另一条评论',author:'作者1'}] //
-          ////////////////////////////////////////
-          ///
-          ///db.posts.update({name: 'qq'},{$set:{comments:[{content: '##这里是评论内容', author: '作者2'},{content:'--这是另一条评论',author:'作者1'}]}});
-          /////////////////////////////////////////////////
-          // 评论的 内容格式应该是这样的吧， 你刚才 都是空了， 肯定报错；我后添加的，也不行
+        if (doc) {
+          //每访问 1 次，pv 值增加 1
+          collection.update({
+            "name": name,
+            "time.day": day,
+            "title": title
+          }, {
+            $inc: {"pv": 1}
+          }, function (err) {
+            mongodb.close();
+            if (err) {
+              return callback(err);
+            }
+          });
+          //解析 markdown 为 html
           doc.post = markdown.toHTML(doc.post);
-          if (doc.comments) {
-              doc.comments.forEach(function (comment) {
-              comment.content = markdown.toHTML(comment.content);
-            });
-          }
+          doc.comments.forEach(function (comment) {
+            comment.content = markdown.toHTML(comment.content);
+          });
+          callback(null, doc);//返回查询的一篇文章
         }
-        callback(null,doc);//返回查询的一篇文章
       });
     });
   });
