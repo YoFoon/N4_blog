@@ -208,6 +208,14 @@ app.post('/post', function (req, res) {
       });
     });
   });
+  app.get('/links', function (req, res) {
+    res.render('links', {
+      title: '友情链接',
+      user: req.session.user,
+      success: req.flash('success').toString(),
+      error: req.flash('error').toString()
+    });
+  });
   app.get('/u/:name',function(req,res){
     var page = req.query.p ? parseInt(req.query.p) : 1;
     //检查用户所在
@@ -312,6 +320,9 @@ app.post('/post', function (req, res) {
       req.flash('success', '留言成功!');
       res.redirect('back');
     });
+  });
+  app.use(function (req, res) {
+    res.render("404");
   });
   function checkLogin(req, res, next) {
     if (!req.session.user) {
