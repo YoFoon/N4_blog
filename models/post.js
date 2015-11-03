@@ -22,10 +22,11 @@ Post.prototype.save = function(callback) {
   }
   //要存入数据库的文档
   var post = {
-      name: this.name,
-      time: time,
-      title: this.title,
-      post: this.post
+    name: this.name,
+    time: time,
+    title:this.title,
+    post: this.post,
+    comments: []
   };
   //打开数据库
   mongodb.open(function (err, db) {
@@ -39,6 +40,8 @@ Post.prototype.save = function(callback) {
         return callback(err);
       }
       //将文档插入 posts 集合
+      //
+      //db.post.update({name: 'qq'},{$set:{comments:[1,2,4]}});
       collection.insert(post, {
         safe: true
       }, function (err) {
@@ -53,7 +56,7 @@ Post.prototype.save = function(callback) {
 };
 
 //获取一个人的所有文章（传入参数 name）或获取所有人的文章（不传入参数）
-Post.getAll = function(name, callback) {
+Post.getTen = function(name,page, callback) {
   //打开数据库
   mongodb.open(function (err, db) {
     if (err) {
@@ -69,19 +72,25 @@ Post.getAll = function(name, callback) {
       if (name) {
         query.name = name;
       }
-      //根据 query 对象查询文章
-      collection.find(query).sort({
-        time: -1
-      }).toArray(function (err, docs) {
-        mongodb.close();
-        if (err) {
-          return callback(err);//失败！返回 err
-        }
-        //解析 markdown 为 html
-		docs.forEach(function (doc) {
-		  doc.post = markdown.toHTML(doc.post);
-		});
-        callback(null, docs);//成功！以数组形式返回查询的结果
+      //使用 count 返回特定查询的文档书 total
+      collection.count(query,function(err,total){
+        //根据 query 对象查询，并跳过前（page-1）*10个结果。返回之后的10个结果
+        collection.find(query,{
+          skip:(page-1)*10,
+          limit:10
+        }).sort({
+          time:-1
+        }).toArray(function(err,docs){
+          mongodb.close();
+          if(err){
+            return callback(err);
+          }
+          //解析 markdown 为 html
+          docs.forEach(function(doc){
+            doc.post = markdown.toHTML(doc.post);
+          });
+          callback(null,docs,total);
+        });
       });
     });
   });
@@ -110,7 +119,23 @@ Post.getOne = function(name,day,title,callback){
           return callback(err);
         }
         //解析markdowm为html
-        doc.post = markdown.toHTML(doc.post);
+        if(doc){
+          // comments 在哪呢
+          // 程序没有问题， 你的数据不正确
+          //////////////////////////////////////////////////////////////////////////////////////
+          // comments =[{content: '##这里是评论内容', author: '作者2'},{content:'--这是另一条评论',author:'作者1'}] //
+          ////////////////////////////////////////
+          ///
+          ///db.posts.update({name: 'qq'},{$set:{comments:[{content: '##这里是评论内容', author: '作者2'},{content:'--这是另一条评论',author:'作者1'}]}});
+          /////////////////////////////////////////////////
+          // 评论的 内容格式应该是这样的吧， 你刚才 都是空了， 肯定报错；我后添加的，也不行
+          doc.post = markdown.toHTML(doc.post);
+          if (doc.comments) {
+              doc.comments.forEach(function (comment) {
+              comment.content = markdown.toHTML(comment.content);
+            });
+          }
+        }
         callback(null,doc);//返回查询的一篇文章
       });
     });
